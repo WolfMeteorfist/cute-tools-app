@@ -32,7 +32,8 @@ android {
         create("release") {
             keyAlias = System.getenv("KEY_ALIAS") ?: "wan_android"
             keyPassword = System.getenv("KEY_PASSWORD") ?: "wanandroid123"
-            storeFile = file(System.getenv("CM_KEYSTORE_PATH") ?: "wan_android.keystore")
+            // 在Codemagic中，签名文件会自动放置在正确位置
+            storeFile = file("wan_android.keystore")
             storePassword = System.getenv("STORE_PASSWORD") ?: "wanandroid123"
         }
     }

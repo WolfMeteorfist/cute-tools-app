@@ -13,7 +13,6 @@ workflows:
         KEY_ALIAS: $KEY_ALIAS
         KEY_PASSWORD: $KEY_PASSWORD
         STORE_PASSWORD: $STORE_PASSWORD
-        CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH
       groups:
         - cute_ui
     scripts:
