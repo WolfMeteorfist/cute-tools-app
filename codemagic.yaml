@@ -14,6 +14,8 @@ workflows:
         KEY_PASSWORD: $KEY_PASSWORD
         STORE_PASSWORD: $STORE_PASSWORD
         CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH
+      groups:
+        - cute_ui
     scripts:
       - name: Get Flutter packages
         script: |
@@ -42,6 +44,8 @@ workflows:
         BUNDLE_ID: "com.example.wan_android"
         # 添加环境变量，在 Codemagic 控制台设置实际值
         DEEPSEEK_API_KEY: $DEEPSEEK_API_KEY
+      groups:
+        - cute_ui
     scripts:
       - name: Get Flutter packages
         script: |
