@@ -9,6 +9,11 @@ workflows:
         PACKAGE_NAME: "com.example.wan_android"
         # 添加环境变量，在 Codemagic 控制台设置实际值
         DEEPSEEK_API_KEY: $DEEPSEEK_API_KEY
+        # 签名相关环境变量
+        KEY_ALIAS: $KEY_ALIAS
+        KEY_PASSWORD: $KEY_PASSWORD
+        STORE_PASSWORD: $STORE_PASSWORD
+        CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH
     scripts:
       - name: Get Flutter packages
         script: |

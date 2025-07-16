@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.wan_android"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -30,10 +30,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = "wan_android"
-            keyPassword = "wanandroid123"
-            storeFile = file("wan_android.keystore")
-            storePassword = "wanandroid123"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "wan_android"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "wanandroid123"
+            storeFile = file(System.getenv("CM_KEYSTORE_PATH") ?: "wan_android.keystore")
+            storePassword = System.getenv("STORE_PASSWORD") ?: "wanandroid123"
         }
     }
 
