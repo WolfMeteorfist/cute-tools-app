@@ -106,7 +106,7 @@ class _AITalkPageState extends State<AITalkPage> {
 
   Future<String> _callDeepSeekAPI(String message) async {
     // 使用配置文件中的 API Key
-    const apiKey = AppConfig.deepSeekApiKey;
+    final apiKey = AppConfig.deepSeekApiKey;
     
     // 如果还没有配置 API Key，显示配置提示
     if (!AppConfig.isDeepSeekConfigured) {
