@@ -12,4 +12,5 @@ class AppRoutes {
   static const String article = '/article';
   static const String tools = '/tools';
   static const String pomodoro = '/tools/pomodoro';
+  static const String aiTalk = '/tools/ai-talk';
  }

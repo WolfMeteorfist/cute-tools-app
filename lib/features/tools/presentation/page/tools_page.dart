@@ -92,6 +92,24 @@ class ToolsPage extends StatelessWidget {
                     context.go(AppRoutes.pomodoro);
                   },
                 ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.smart_toy, size: 28),
+                  label: const Text('AI 聊天助手', style: TextStyle(fontSize: 18)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 8,
+                    shadowColor: Colors.purple.withOpacity(0.5),
+                  ),
+                  onPressed: () {
+                    context.go(AppRoutes.aiTalk);
+                  },
+                ),
               ],
             ),
           ),
