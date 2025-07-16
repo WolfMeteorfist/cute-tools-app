@@ -4,6 +4,7 @@ import 'package:wan_android/common_widgets/error_page.dart';
 import 'package:wan_android/core/app_routes.dart';
 import 'package:wan_android/features/article/router.dart';
 import 'package:wan_android/features/auth/router.dart';
+import 'package:wan_android/features/tools/router.dart';
 
 import '../core/log_util.dart';
 
@@ -170,10 +171,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       const SizedBox(height: 20),
 
                       _buildCuteButton(
+                        icon: Icons.build,
+                        text: '工具鸭',
+                        onPressed: () => context.go(AppRoutes.tools),
+                        delay: 0.6,
+                      ),
+                      const SizedBox(height: 20),
+
+                      _buildCuteButton(
                         icon: Icons.square,
                         text: '广场鸭',
                         onPressed: () => context.go('/non-existent-route'),
-                        delay: 0.6,
+                        delay: 0.8,
                         isError: true,
                       ),
                     ],
@@ -251,7 +260,8 @@ class AppRouterConfig {
         builder: (context, state) => const HomePage(),
       ),
       ...articleRoutes,
-      ...authRoutes
+      ...authRoutes,
+      ...toolsRoutes
     ]
   );
 }

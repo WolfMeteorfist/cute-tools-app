@@ -10,4 +10,6 @@ class AppRoutes {
   static const String square = '/dashboard';
   static const String collect = '/collect';
   static const String article = '/article';
+  static const String tools = '/tools';
+  static const String pomodoro = '/tools/pomodoro';
  }
