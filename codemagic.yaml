@@ -24,16 +24,6 @@ workflows:
       email:
         recipients:
           - your-email@example.com
-      slack:
-        channel: '#builds'
-        notify_on_build_start: true
-        notify:
-          build_pages: true
-          branches:
-            - develop
-            - master
-            - release/*
-        webhook_url: $SLACK_WEBHOOK_URL
 
   ios-workflow:
     name: iOS Build
@@ -61,14 +51,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - your-email@example.com
-      slack:
-        channel: '#builds'
-        notify_on_build_start: true
-        notify:
-          build_pages: true
-          branches:
-            - develop
-            - master
-            - release/*
-        webhook_url: $SLACK_WEBHOOK_URL 
+          - your-email@example.com 
