@@ -1,0 +1,70 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        PACKAGE_NAME: "com.example.wan_android"
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Flutter build apk
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+      slack:
+        channel: '#builds'
+        notify_on_build_start: true
+        notify:
+          build_pages: true
+          branches:
+            - develop
+            - master
+            - release/*
+        webhook_url: $SLACK_WEBHOOK_URL
+
+  ios-workflow:
+    name: iOS Build
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        XCODE_PROJECT: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+        BUNDLE_ID: "com.example.wan_android"
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+      slack:
+        channel: '#builds'
+        notify_on_build_start: true
+        notify:
+          build_pages: true
+          branches:
+            - develop
+            - master
+            - release/*
+        webhook_url: $SLACK_WEBHOOK_URL 
