@@ -30,11 +30,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = System.getenv("KEY_ALIAS") ?: "wan_android"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "wanandroid123"
-            // 在Codemagic中，签名文件会自动放置在正确位置
+            keyAlias = "wan_android"
+            keyPassword = "wanandroid123"
             storeFile = file("wan_android.keystore")
-            storePassword = System.getenv("STORE_PASSWORD") ?: "wanandroid123"
+            storePassword = "wanandroid123"
         }
     }
 
