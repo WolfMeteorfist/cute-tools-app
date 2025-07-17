@@ -6,10 +6,12 @@ import 'package:wan_android/features/article/presentation/page/article_list_page
 final List<GoRoute> articleRoutes = [
   GoRoute(
     path: AppRoutes.article,
+    name: 'article',
     builder: (context, state) => const ArticleListPage(),
     routes: [
       GoRoute(
         path: ':id',
+        name: 'articleDetail',
         builder: (context, state) {
           final id = state.pathParameters['id'];
           if (id == null) {

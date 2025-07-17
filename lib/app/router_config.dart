@@ -157,7 +157,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       _buildCuteButton(
                         icon: Icons.login,
                         text: '登录鸭',
-                        onPressed: () => context.go(AppRoutes.login),
+                        onPressed: () => context.goNamed('login'),
                         delay: 0.2,
                       ),
                       const SizedBox(height: 20),
@@ -165,7 +165,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       _buildCuteButton(
                         icon: Icons.person_add,
                         text: '注册鸭',
-                        onPressed: () => context.go(AppRoutes.register),
+                        onPressed: () => context.goNamed('register'),
                         delay: 0.4,
                       ),
                       const SizedBox(height: 20),
@@ -173,7 +173,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       _buildCuteButton(
                         icon: Icons.build,
                         text: '工具鸭',
-                        onPressed: () => context.go(AppRoutes.tools),
+                        onPressed: () => context.goNamed('tools'),
                         delay: 0.6,
                       ),
                       const SizedBox(height: 20),
@@ -257,6 +257,7 @@ class AppRouterConfig {
     routes: [
       GoRoute(
         path: AppRoutes.home,
+        name: 'home',
         builder: (context, state) => const HomePage(),
       ),
       ...articleRoutes,

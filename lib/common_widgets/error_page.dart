@@ -42,7 +42,7 @@ class _ErrorPageState extends State<ErrorPage> {
       rightButtonText: '再试一次',
       onLeftButtonPressed: () {
         Navigator.of(context).pop(); // 关闭弹窗
-        context.go(AppRoutes.home);
+        context.goNamed('home');
       },
       onRightButtonPressed: () {
         Navigator.of(context).pop(); // 关闭弹窗
@@ -107,7 +107,7 @@ class _ErrorPageState extends State<ErrorPage> {
                     _isNavigating = true;
                   });
 
-                  context.go(AppRoutes.home);
+                  context.goNamed('home');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.pinkAccent,

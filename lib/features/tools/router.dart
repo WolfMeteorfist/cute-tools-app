@@ -10,14 +10,19 @@ import 'package:wan_android/features/tools/presentation/page/ai_talk_page.dart'
 final List<GoRoute> toolsRoutes = [
   GoRoute(
     path: '/tools',
+    name: 'tools',
     builder: (context, state) => const ToolsPage(),
-  ),
-  GoRoute(
-    path: '/tools/pomodoro',
-    builder: (context, state) => const PomodoroTimerPage(),
-  ),
-  GoRoute(
-    path: '/tools/ai-talk',
-    builder: (context, state) => const AITalkPage(),
+    routes: [
+      GoRoute(
+        path: 'pomodoro',
+        name: 'pomodoro',
+        builder: (context, state) => const PomodoroTimerPage(),
+      ),
+      GoRoute(
+        path: 'ai-talk',
+        name: 'aiTalk',
+        builder: (context, state) => const AITalkPage(),
+      ),
+    ],
   ),
 ]; 

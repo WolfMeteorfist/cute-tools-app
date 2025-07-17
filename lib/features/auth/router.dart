@@ -6,6 +6,14 @@ import 'package:wan_android/features/auth/presentation/page/login_page.dart'
 import 'package:wan_android/features/auth/presentation/page/register_page.dart';
 
 final List<GoRoute> authRoutes = [
-  GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-  GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
+  GoRoute(
+    path: '/login', 
+    name: 'login',
+    builder: (context, state) => const LoginPage()
+  ),
+  GoRoute(
+    path: '/register', 
+    name: 'register',
+    builder: (context, state) => const RegisterPage()
+  ),
 ];
