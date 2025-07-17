@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wan_android/core/log_util.dart';
 
 class PomodoroTimerPage extends StatefulWidget {
   const PomodoroTimerPage({super.key});
@@ -12,10 +14,11 @@ class PomodoroTimerPage extends StatefulWidget {
 }
 
 class _PomodoroTimerPageState extends State<PomodoroTimerPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final TextEditingController _taskController = TextEditingController();
   int _seconds = 25 * 60;
   int _totalSeconds = 25 * 60;
+  int _curTaskStartTime = 0;
   Timer? _timer;
   bool _isRunning = false;
   bool _showTomato = true;
@@ -23,7 +26,9 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   late AnimationController _shakeController;
+  late AnimationController _progressController;
   late Animation<double> _shakeAnimation;
+  late Animation<double> _progressAnimation;
 
   @override
   void initState() {
@@ -32,14 +37,27 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
     _shakeAnimation = Tween<double>(begin: 0, end: 16).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
+    
+    _progressAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
+    );
+    
     _shakeController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _shakeController.reverse();
       }
     });
+    
+    // 加载保存的状态
+    _loadSavedState();
   }
 
   @override
@@ -47,16 +65,59 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
     _timer?.cancel();
     _taskController.dispose();
     _shakeController.dispose();
+    _progressController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    if (_isRunning) return;
+  // 保存状态到本地存储
+  Future<void> _saveState() async {
+    logger.d("_saveState");
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pomodoro_task', _taskController.text);
+    await prefs.setInt('pomodoro_start_time', _curTaskStartTime);
+    await prefs.setBool("pomodoro_is_running", _isRunning);
+  }
+
+  Future<void> _clearState() async {
+    logger.d("_clearState");
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pomodoro_task');
+    await prefs.remove('pomodoro_start_time');
+    await prefs.remove('pomodoro_is_running');
+  }
+
+  // 从本地存储加载状态
+  Future<void> _loadSavedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _taskController.text = prefs.getString('pomodoro_task') ?? '';
+      final savedStartTime = prefs.getInt('pomodoro_start_time');
+      _seconds = savedStartTime != null
+          ? _totalSeconds - (DateTime.now().second - savedStartTime)
+          : _totalSeconds;
+      _isRunning = prefs.getBool("pomodoro_is_running") ?? false;
+    });
+    logger.d("_loadSavedState: ${_taskController.text}, $_seconds, $_isRunning");
+    if (_isRunning) {
+      _startTimer(justTimer: true);
+    }
+  }
+
+  void _startTimer({bool justTimer = false})  {
+    if (_isRunning && _timer?.isActive == true) return;
+    logger.d("_startTimer: ${_taskController.text}, $_seconds, $_isRunning justTimer:$justTimer");
     setState(() {
       _isRunning = true;
       _isShaking = false;
     });
+
+    if (!justTimer) {
+      _curTaskStartTime = DateTime.now().second;
+      _saveState();
+    }
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_seconds > 0) {
         setState(() {
@@ -69,16 +130,26 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
     });
   }
 
+  void _pauseTimer() {
+    if (!_isRunning) return;
+    
+    setState(() {
+      _isRunning = false;
+    });
+    
+    _timer?.cancel();
+  }
+
   void _onTimerEnd() async {
     setState(() {
       _isShaking = true;
     });
     _shakeController.forward();
+    
     try {
       await _audioPlayer.setAsset('assets/audio/alarm.wav');
       await _audioPlayer.play();
     } catch (e) {
-      // 如果音频播放失败，至少显示摇晃动画
       print('音频播放失败: $e');
     }
   }
@@ -89,7 +160,12 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
       _seconds = _totalSeconds;
       _isRunning = false;
       _isShaking = false;
+      _curTaskStartTime = 0;
+      _taskController.clear(); // 清空任务内容
     });
+    
+    // 保存重置后的状态
+    _clearState();
   }
 
   String get _timeString {
@@ -176,7 +252,7 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
                   // 番茄计时器区域
                   if (_showTomato)
                     AnimatedBuilder(
-                      animation: _shakeController,
+                      animation: Listenable.merge([_shakeController, _progressController]),
                       builder: (context, child) {
                         double offset = _isShaking ? _shakeAnimation.value : 0;
                         return Transform.translate(
@@ -193,16 +269,14 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  // 圆形进度条
+                                  // 可爱的圆形进度条
                                   SizedBox(
                                     width: 200,
                                     height: 200,
-                                    child: CircularProgressIndicator(
-                                      value: _progress,
-                                      strokeWidth: 8,
-                                      backgroundColor: Colors.white.withOpacity(0.3),
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        _isRunning ? Colors.green : Colors.orange,
+                                    child: CustomPaint(
+                                      painter: CuteProgressPainter(
+                                        progress: _progress,
+                                        isRunning: _isRunning,
                                       ),
                                     ),
                                   ),
@@ -300,7 +374,7 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton.icon(
-                        onPressed: _isRunning ? null : _startTimer,
+                        onPressed: _isRunning ? _pauseTimer : _startTimer,
                         icon: Icon(_isRunning ? Icons.pause : Icons.play_arrow, size: 24),
                         label: Text(
                           _isRunning ? '暂停' : '开始',
@@ -391,4 +465,71 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
       ),
     );
   }
+}
+
+// 可爱的进度条绘制器
+class CuteProgressPainter extends CustomPainter {
+  final double progress;
+  final bool isRunning;
+
+  CuteProgressPainter({required this.progress, required this.isRunning});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // 背景圆环
+    final backgroundPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius - 6, backgroundPaint);
+
+    // 进度圆环
+    final progressPaint = Paint()
+      ..shader = RadialGradient(
+        colors: isRunning 
+          ? [Colors.green, Colors.lightGreen, Colors.green.shade300]
+          : [Colors.orange, Colors.deepOrange, Colors.orange.shade300],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
+
+    // 绘制进度弧线
+    final rect = Rect.fromCircle(center: center, radius: radius - 6);
+    canvas.drawArc(
+      rect,
+      -90 * (3.14159 / 180), // 从12点钟方向开始
+      progress * 2 * 3.14159, // 根据进度绘制弧线
+      false,
+      progressPaint,
+    );
+
+    // 添加可爱的装饰点
+    if (isRunning) {
+      final dotPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+
+      final dotRadius = 3.0;
+      final dotCount = 8;
+      for (int i = 0; i < dotCount; i++) {
+        final angle = (i / dotCount) * 2 * 3.14159;
+        final dotX = center.dx + (radius - 20) * cos(angle);
+        final dotY = center.dy + (radius - 20) * sin(angle);
+        
+        if (i / dotCount <= progress) {
+          canvas.drawCircle(Offset(dotX, dotY), dotRadius, dotPaint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 } 
