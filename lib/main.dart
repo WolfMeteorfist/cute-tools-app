@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:wan_android/app/router_config.dart';
+import 'package:wan_android/core/services/pomodoro_background_service.dart';
+import 'package:wan_android/core/widgets/pomodoro_floating_widget.dart';
 
-import 'app/router_config.dart';
-
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化后台服务
+  await PomodoroBackgroundService.initialize();
+  
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -19,6 +24,15 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       routerConfig: AppRouterConfig.router,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!,
+            // 添加悬浮窗
+            const PomodoroFloatingWidget(),
+          ],
+        );
+      },
     );
   }
 }

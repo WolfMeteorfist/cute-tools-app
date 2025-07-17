@@ -38,7 +38,13 @@ dependencies:
   logger: ^2.6.0
   just_audio: ^0.9.36
   http: ^1.1.0
-  shared_preferences: ^2.2.2
+  # 后台服务
+  flutter_background_service: ^5.0.5
+  flutter_background_service_android: ^6.2.2
+  # 震动
+  vibration: ^3.1.0
+  # 本地通知
+  flutter_local_notifications: ^17.2.0
 
 dev_dependencies:
   flutter_test:

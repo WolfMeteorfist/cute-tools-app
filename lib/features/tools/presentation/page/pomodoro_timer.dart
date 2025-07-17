@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wan_android/core/log_util.dart';
+import 'package:wan_android/core/services/pomodoro_background_service.dart';
 
 class PomodoroTimerPage extends StatefulWidget {
   const PomodoroTimerPage({super.key});
@@ -18,7 +17,6 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
   final TextEditingController _taskController = TextEditingController();
   int _seconds = 25 * 60;
   int _totalSeconds = 25 * 60;
-  int _curTaskStartTime = 0;
   Timer? _timer;
   bool _isRunning = false;
   bool _showTomato = true;
@@ -56,8 +54,23 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
       }
     });
     
-    // 加载保存的状态
-    _loadSavedState();
+    // 立即加载当前状态
+    _loadCurrentState();
+    // 启动UI更新定时器
+    _startUIUpdateTimer();
+  }
+
+  // 立即加载当前状态
+  void _loadCurrentState() {
+    final state = PomodoroBackgroundService.getCurrentState();
+    setState(() {
+      _isRunning = state['isRunning'];
+      _seconds = state['remainingSeconds'];
+      // 只在计时器运行时才加载任务名称
+      if (state['isRunning']) {
+        _taskController.text = state['taskName'];
+      }
+    });
   }
 
   @override
@@ -70,81 +83,71 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
     super.dispose();
   }
 
-  // 保存状态到本地存储
-  Future<void> _saveState() async {
-    logger.d("_saveState");
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pomodoro_task', _taskController.text);
-    await prefs.setInt('pomodoro_start_time', _curTaskStartTime);
-    await prefs.setBool("pomodoro_is_running", _isRunning);
-  }
-
-  Future<void> _clearState() async {
-    logger.d("_clearState");
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pomodoro_task');
-    await prefs.remove('pomodoro_start_time');
-    await prefs.remove('pomodoro_is_running');
-  }
-
-  // 从本地存储加载状态
-  Future<void> _loadSavedState() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _taskController.text = prefs.getString('pomodoro_task') ?? '';
-      final savedStartTime = prefs.getInt('pomodoro_start_time');
-      _seconds = savedStartTime != null
-          ? _totalSeconds - (DateTime.now().second - savedStartTime)
-          : _totalSeconds;
-      _isRunning = prefs.getBool("pomodoro_is_running") ?? false;
+  // 启动UI更新定时器
+  void _startUIUpdateTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _updateUIFromBackgroundService();
     });
-    logger.d("_loadSavedState: ${_taskController.text}, $_seconds, $_isRunning");
-    if (_isRunning) {
-      _startTimer(justTimer: true);
+  }
+
+  // 从后台服务更新UI
+  void _updateUIFromBackgroundService() {
+    final state = PomodoroBackgroundService.getCurrentState();
+    
+    setState(() {
+      _isRunning = state['isRunning'];
+      _seconds = state['remainingSeconds'];
+      // 只在计时器运行时才更新任务名称，避免覆盖用户输入
+      if (state['isRunning']) {
+        _taskController.text = state['taskName'];
+      }
+    });
+    
+    // 如果时间到了，触发结束动画
+    if (_isRunning && _seconds <= 0) {
+      setState(() {
+        _isShaking = true;
+      });
+      _shakeController.forward();
+      _onTimerEnd();
     }
   }
 
-  void _startTimer({bool justTimer = false})  {
-    if (_isRunning && _timer?.isActive == true) return;
-    logger.d("_startTimer: ${_taskController.text}, $_seconds, $_isRunning justTimer:$justTimer");
+  void _startTimer() async {
+    if (_isRunning) return;
+    
+    logger.d("_startTimer: ${_taskController.text}");
+    
+    // 设置后台服务状态
+    PomodoroBackgroundService.setTimerState(_taskController.text);
+    
+    // 启动后台服务
+    await PomodoroBackgroundService.startService();
+    
     setState(() {
       _isRunning = true;
       _isShaking = false;
     });
-
-    if (!justTimer) {
-      _curTaskStartTime = DateTime.now().second;
-      _saveState();
-    }
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_seconds > 0) {
-        setState(() {
-          _seconds--;
-        });
-      } else {
-        _timer?.cancel();
-        _onTimerEnd();
-      }
-    });
   }
 
-  void _pauseTimer() {
+  void _pauseTimer() async {
     if (!_isRunning) return;
+    
+    logger.d("_pauseTimer");
+    
+    // 停止后台服务
+    await PomodoroBackgroundService.stopService();
     
     setState(() {
       _isRunning = false;
     });
-    
-    _timer?.cancel();
   }
 
   void _onTimerEnd() async {
-    setState(() {
-      _isShaking = true;
-    });
-    _shakeController.forward();
+    logger.d("_onTimerEnd");
+    
+    // 停止后台服务
+    await PomodoroBackgroundService.stopService();
     
     try {
       await _audioPlayer.setAsset('assets/audio/alarm.wav');
@@ -154,18 +157,18 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
     }
   }
 
-  void _reset() {
+  void _reset() async {
+    logger.d("_reset");
+    
+    // 停止后台服务
+    await PomodoroBackgroundService.stopService();
+    
     setState(() {
-      _timer?.cancel();
       _seconds = _totalSeconds;
       _isRunning = false;
       _isShaking = false;
-      _curTaskStartTime = 0;
       _taskController.clear(); // 清空任务内容
     });
-    
-    // 保存重置后的状态
-    _clearState();
   }
 
   String get _timeString {
