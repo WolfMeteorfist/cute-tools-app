@@ -19,7 +19,7 @@ class _PomodoroFloatingWidgetState extends State<PomodoroFloatingWidget>
   int _remainingSeconds = 0;
   String _taskName = '';
   bool _isRunning = false;
-  Timer? _updateTimer;
+  StreamSubscription<TimerEvent>? _eventSubscription;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -35,44 +35,47 @@ class _PomodoroFloatingWidgetState extends State<PomodoroFloatingWidget>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _checkTimerState();
-    _startUpdateTimer();
+    _initializeTimerListener();
+  }
+
+  void _initializeTimerListener() {
+    _eventSubscription = PomodoroBackgroundService.eventStream.listen((event) {
+      logger.d('Received timer event: ${event.type}');
+      
+      setState(() {
+        _remainingSeconds = event.remainingSeconds;
+        _taskName = event.taskName;
+        _isRunning = event.isRunning;
+        
+        // 根据事件类型更新可见性
+        switch (event.type) {
+          case TimerEventType.started:
+            _isVisible = true;
+            if (!_pulseController.isAnimating) {
+              _pulseController.repeat(reverse: true);
+            }
+            break;
+          case TimerEventType.updated:
+            _isVisible = true;
+            break;
+          case TimerEventType.completed:
+          case TimerEventType.stopped:
+            _isVisible = false;
+            _pulseController.stop();
+            break;
+          case TimerEventType.paused:
+            _pulseController.stop();
+            break;
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
-    _updateTimer?.cancel();
+    _eventSubscription?.cancel();
     _pulseController.dispose();
     super.dispose();
-  }
-
-  void _startUpdateTimer() {
-    _updateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _checkTimerState();
-    });
-  }
-
-  void _checkTimerState() {
-    final state = PomodoroBackgroundService.getCurrentState();
-
-    if (state['isRunning'] && state['remainingSeconds'] > 0) {
-      setState(() {
-        _isVisible = true;
-        _remainingSeconds = state['remainingSeconds'];
-        _taskName = state['taskName'];
-        _isRunning = true;
-      });
-
-      if (!_pulseController.isAnimating) {
-        _pulseController.repeat(reverse: true);
-      }
-    } else {
-      setState(() {
-        _isVisible = false;
-        _isRunning = false;
-      });
-      _pulseController.stop();
-    }
   }
 
   String get _timeString {

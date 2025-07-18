@@ -17,11 +17,11 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
   final TextEditingController _taskController = TextEditingController();
   int _seconds = 25 * 60;
   int _totalSeconds = 25 * 60;
-  Timer? _timer;
   bool _isRunning = false;
   bool _showTomato = true;
   bool _isShaking = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  StreamSubscription<TimerEvent>? _eventSubscription;
 
   late AnimationController _shakeController;
   late AnimationController _progressController;
@@ -54,14 +54,60 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
       }
     });
     
-    // 立即加载当前状态
-    _loadCurrentState();
-    // 启动UI更新定时器
-    _startUIUpdateTimer();
+    // 初始化事件监听
+    _initializeTimerListener();
+    // 加载初始状态
+    _loadInitialState();
   }
 
-  // 立即加载当前状态
-  void _loadCurrentState() {
+  void _initializeTimerListener() {
+    _eventSubscription = PomodoroBackgroundService.eventStream.listen((event) {
+      logger.d('Timer page received event: ${event.type}');
+      
+      setState(() {
+        _isRunning = event.isRunning;
+        _seconds = event.remainingSeconds;
+        
+        // 只在计时器运行时更新任务名称，避免覆盖用户输入
+        if (event.isRunning) {
+          _taskController.text = event.taskName;
+        }
+      });
+      
+      // 处理特定事件类型
+      switch (event.type) {
+        case TimerEventType.started:
+          logger.d('Timer started');
+          break;
+        case TimerEventType.updated:
+          // 检查是否时间到了
+          if (event.remainingSeconds <= 0) {
+            setState(() {
+              _isShaking = true;
+            });
+            _shakeController.forward();
+            _onTimerEnd();
+          }
+          break;
+        case TimerEventType.completed:
+          logger.d('Timer completed');
+          setState(() {
+            _isShaking = true;
+          });
+          _shakeController.forward();
+          _onTimerEnd();
+          break;
+        case TimerEventType.stopped:
+          logger.d('Timer stopped');
+          break;
+        case TimerEventType.paused:
+          logger.d('Timer paused');
+          break;
+      }
+    });
+  }
+
+  void _loadInitialState() {
     final state = PomodoroBackgroundService.getCurrentState();
     setState(() {
       _isRunning = state['isRunning'];
@@ -75,42 +121,12 @@ class _PomodoroTimerPageState extends State<PomodoroTimerPage>
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _eventSubscription?.cancel();
     _taskController.dispose();
     _shakeController.dispose();
     _progressController.dispose();
     _audioPlayer.dispose();
     super.dispose();
-  }
-
-  // 启动UI更新定时器
-  void _startUIUpdateTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateUIFromBackgroundService();
-    });
-  }
-
-  // 从后台服务更新UI
-  void _updateUIFromBackgroundService() {
-    final state = PomodoroBackgroundService.getCurrentState();
-    
-    setState(() {
-      _isRunning = state['isRunning'];
-      _seconds = state['remainingSeconds'];
-      // 只在计时器运行时才更新任务名称，避免覆盖用户输入
-      if (state['isRunning']) {
-        _taskController.text = state['taskName'];
-      }
-    });
-    
-    // 如果时间到了，触发结束动画
-    if (_isRunning && _seconds <= 0) {
-      setState(() {
-        _isShaking = true;
-      });
-      _shakeController.forward();
-      _onTimerEnd();
-    }
   }
 
   void _startTimer() async {
